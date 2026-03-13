@@ -2,7 +2,7 @@
 
 ## Description
 
-Fetch follower counts and metrics from 11+ social media platforms. Supports input via profile URL or account nickname. Platforms include Bilibili, YouTube, Douyin, Kuaishou, Xiaohongshu, TikTok, Instagram, WeChat Video, Toutiao, Baijiahao, and iQiyi.
+Fetch follower counts and metrics from 11+ social media platforms. Supports input via profile URL or account nickname. Platforms include Instagram, YouTube, TikTok, Douyin, WeChat Video, Kuaishou, iQiyi, Xiaohongshu, Bilibili, Toutiao, and Baijiahao.
 
 ## When to Use
 
