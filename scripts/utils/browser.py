@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import asyncio
+import glob
 import os
+import platform
 import shutil
 import subprocess
 import time
@@ -16,21 +18,73 @@ _DEFAULT_UA = (
     "Chrome/131.0.0.0 Safari/537.36"
 )
 
-_CHROME_PATHS = [
-    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-    shutil.which("google-chrome") or "",
-    shutil.which("google-chrome-stable") or "",
-    shutil.which("chromium-browser") or "",
-    shutil.which("chromium") or "",
-]
+_SYSTEM = platform.system()
+
+_SYSTEM_CHROME_PATHS: list[str] = []
+
+if _SYSTEM == "Darwin":
+    _SYSTEM_CHROME_PATHS.append(
+        "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+    )
+elif _SYSTEM == "Windows":
+    for env_var in ("PROGRAMFILES", "PROGRAMFILES(X86)", "LOCALAPPDATA"):
+        base = os.environ.get(env_var, "")
+        if base:
+            _SYSTEM_CHROME_PATHS.append(
+                os.path.join(base, "Google", "Chrome", "Application", "chrome.exe")
+            )
+
+for _cmd in ("google-chrome", "google-chrome-stable", "chromium-browser", "chromium"):
+    _found = shutil.which(_cmd)
+    if _found:
+        _SYSTEM_CHROME_PATHS.append(_found)
+
+
+def _find_playwright_chromium() -> str | None:
+    """Find Playwright's installed Chromium executable as fallback.
+
+    Playwright >= 1.39 ships "Google Chrome for Testing" instead of plain
+    Chromium.  Both old and new directory layouts are searched.
+    """
+    if _SYSTEM == "Darwin":
+        base = os.path.expanduser("~/Library/Caches/ms-playwright")
+        patterns = [
+            # New layout (Playwright >= 1.39): "Google Chrome for Testing"
+            "chromium-*/chrome-mac-*/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing",
+            # Old layout: plain Chromium
+            "chromium-*/chrome-mac/Chromium.app/Contents/MacOS/Chromium",
+        ]
+    elif _SYSTEM == "Linux":
+        base = os.path.expanduser("~/.cache/ms-playwright")
+        patterns = [
+            "chromium-*/chrome-linux*/chrome",
+        ]
+    elif _SYSTEM == "Windows":
+        base = os.path.join(os.environ.get("LOCALAPPDATA", ""), "ms-playwright")
+        patterns = [
+            "chromium-*/chrome-win*/chrome.exe",
+        ]
+    else:
+        return None
+    if not os.path.isdir(base):
+        return None
+    for pattern in patterns:
+        matches = glob.glob(os.path.join(base, pattern))
+        if matches:
+            return sorted(matches)[-1]
+    return None
 
 
 def _find_chrome() -> str:
-    for p in _CHROME_PATHS:
+    for p in _SYSTEM_CHROME_PATHS:
         if p and os.path.isfile(p):
             return p
+    pw_chromium = _find_playwright_chromium()
+    if pw_chromium:
+        return pw_chromium
     raise RuntimeError(
-        "Chrome not found. Install Google Chrome or set its path."
+        "Chrome/Chromium not found. Please install Google Chrome, "
+        "or run 'playwright install chromium' to install Playwright's Chromium."
     )
 
 

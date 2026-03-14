@@ -38,18 +38,31 @@ class DouyinPlatform(BasePlatform):
 
                 await self._dismiss_captcha(page)
 
-                follower_el = await page.query_selector(
-                    '[data-e2e="user-info"] .fan .num'
-                )
-                if not follower_el:
-                    follower_el = await page.query_selector(
-                        'span[class*="follower"] span[class*="num"]'
-                    )
                 count = None
-                if follower_el:
-                    text = (await follower_el.inner_text()).strip()
-                    count = parse_follower_text(text)
 
+                # Strategy 1: data-e2e="user-info-fans" (current Douyin layout)
+                # Text may contain "粉丝\n1.8亿" with a newline separator
+                fans_el = await page.query_selector('[data-e2e="user-info-fans"]')
+                if fans_el:
+                    text = (await fans_el.inner_text()).strip()
+                    count = parse_follower_text(text)
+                    if count is None:
+                        count = extract_follower_count(text, "粉丝")
+
+                # Strategy 2: legacy selectors
+                if count is None:
+                    for sel in (
+                        '[data-e2e="user-info"] .fan .num',
+                        'span[class*="follower"] span[class*="num"]',
+                    ):
+                        el = await page.query_selector(sel)
+                        if el:
+                            text = (await el.inner_text()).strip()
+                            count = parse_follower_text(text)
+                            if count is not None:
+                                break
+
+                # Strategy 3: scan all visible text elements
                 if count is None:
                     all_spans = await page.query_selector_all("span, div")
                     for span in all_spans:
@@ -64,6 +77,7 @@ class DouyinPlatform(BasePlatform):
                         if count is not None:
                             break
 
+                # Strategy 4: full page body text
                 if count is None:
                     body_text = await page.inner_text("body")
                     count = extract_follower_count(body_text)

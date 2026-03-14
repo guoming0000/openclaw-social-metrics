@@ -17,6 +17,7 @@ Fetch follower counts and metrics from 11+ social media platforms. Supports inpu
 - Python 3.9+
 - pip packages: `requests`, `playwright`, `beautifulsoup4` (install via `pip install -r requirements.txt`)
 - Playwright browsers: run `playwright install chromium` after installing the package
+- **Recommended**: Google Chrome installed on the system — Douyin, Kuaishou, and Xiaohongshu use Chrome's CDP (DevTools Protocol) mode for better anti-detection. If Chrome is not installed, Playwright's bundled Chromium will be used as an automatic fallback
 - Optional: `YOUTUBE_API_KEY` environment variable for YouTube Data API (falls back to browser scraping if not set)
 
 ## Supported Platforms
